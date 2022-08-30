@@ -1,12 +1,9 @@
 #include <iostream>
 #include "magnum/fjson/parser.h"
 #include "magnum/fjson/json_object.h"
-// #include"../test/json/json_object.h"
-// #include"../test/json/parser.h"
 #include <fstream>
 
 using namespace fjson;
-// using namespace json;
 
 struct Base
 {
@@ -46,8 +43,7 @@ struct Mytest
 void test_class_serialization()
 {
     Mytest test{.id = 32, .name = "fda"};
-    auto item = Parser::FromJSON<Mytest>(R"({"base":{"pp":0,"qq":""},"id":32,"name":"fda"} )");
-    // auto item = Parser::FromJson<Mytest>(R"({"base":{"pp":0,"qq":""},"id":32,"name":"fda"} )"); // serialization
+    auto item = Parser::FromJSON<Mytest>(R"({"base":{"pp":0,"qq":""},"id":32,"name":"fda"} )"); // serialization
     std::cout << Parser::ToJSON(item);                                                          // deserialization
 }
 
