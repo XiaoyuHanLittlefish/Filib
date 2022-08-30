@@ -1,28 +1,71 @@
 #include <iostream>
-#include <vector>
-#include <map>
-#include <string>
-#include <sstream>
+#include "magnum/fjson/parser.h"
+#include "magnum/fjson/json_object.h"
+// #include"../test/json/json_object.h"
+// #include"../test/json/parser.h"
+#include <fstream>
 
-#include "STL/utils.h"
-#include "STL/functional.h"
-#include "STL/algobase.h"
-#include "pylike/pystr.h"
-#include "magnum/timer.h"
+using namespace fjson;
+// using namespace json;
+
+struct Base
+{
+    int pp;
+    std::string qq;
+
+    START_FROM_JSON
+    pp = from("pp", int);
+    qq = from("qq", std::string);
+    END_FROM_JSON
+
+    START_TO_JSON
+    to("pp") = pp;
+    to("qq") = qq;
+    END_TO_JSON
+};
+
+struct Mytest
+{
+    int id;
+    std::string name;
+    Base q;
+
+    START_TO_JSON
+    to_struct("base", q);
+    to("id") = id;
+    to("name") = name;
+    END_TO_JSON
+
+    START_FROM_JSON
+    id = from("id", int);
+    name = from("name", std::string);
+    from_struct("base", q);
+    END_FROM_JSON
+};
+
+void test_class_serialization()
+{
+    Mytest test{.id = 32, .name = "fda"};
+    auto item = Parser::FromJSON<Mytest>(R"({"base":{"pp":0,"qq":""},"id":32,"name":"fda"} )");
+    // auto item = Parser::FromJson<Mytest>(R"({"base":{"pp":0,"qq":""},"id":32,"name":"fda"} )"); // serialization
+    std::cout << Parser::ToJSON(item);                                                          // deserialization
+}
+
+void test_string_parser()
+{
+    {
+        std::ifstream fin("../../../../test/test.json");
+        std::string text((std::istreambuf_iterator<char>(fin)), std::istreambuf_iterator<char>());
+        Parser p;
+        p.init(text);
+        auto q = p.parse();
+        std::ofstream fout("../../../../test/test_out.json");
+        fout << q.to_string();
+    }
+}
 
 int main()
 {
-    const int num = 100000;
-    timer timer;
-
-    timer.start();
-    std::string str1 = "";
-    for (int i = 0; i < num; i++)
-    {
-        str1 += "a";
-    }
-    timer::millisecond cost_time = timer.end();
-
-    std::cout << "str+=a 所耗费的时间：" << cost_time << " ms" << std::endl;
-
+    test_class_serialization();
+    test_string_parser();
 }
