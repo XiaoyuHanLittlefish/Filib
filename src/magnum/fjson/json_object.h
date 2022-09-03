@@ -1,5 +1,5 @@
-#ifndef FJSON_JSONOBJECT_H__
-#define FJSON_JSONOBJECT_H__
+#ifndef MAGNUM_FJSON_JSON_OBJECT_H__
+#define MAGNUM_FJSON_JSON_OBJECT_H__
 
 #include <stdexcept>
 #include <utility>
@@ -132,4 +132,4 @@ namespace fjson
 
 } // namespace fjson
 
-#endif //! FJSON_JSONOBJECT_H__
+#endif //! MAGNUM_FJSON_JSON_OBJECT_H__

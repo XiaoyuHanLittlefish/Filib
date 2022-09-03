@@ -1,5 +1,5 @@
-#ifndef FJSON_PARSER_H__
-#define FJSON_PARSER_H__
+#ifndef MAGNUM_FJSON_PARSER_H__
+#define MAGNUM_FJSON_PARSER_H__
 
 #include "json_object.h"
 
@@ -100,4 +100,4 @@ namespace fjson
     };
 } // namespace fjson
 
-#endif //! FJSON_PARSER_H__
+#endif //! MAGNUM_FJSON_PARSER_H__
