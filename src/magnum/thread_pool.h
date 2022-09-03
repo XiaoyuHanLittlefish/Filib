@@ -1,4 +1,0 @@
-#ifndef MAGNUM_THREAD_POOL_H__
-#define MAGNUM_THREAD_POOL_H__
-
-#endif // !MAGNUM_THREAD_POOL_H__
