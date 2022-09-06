@@ -28,7 +28,7 @@ namespace threadsafe
         {
             std::unique_lock<std::mutex> lk(m_mtx);
             m_cond.wait(lk, [this]
-                        { return !m_queue.empty() });
+                        { return !m_queue.empty(); });
             // value = std::move(m_queue.front());
             value = std::move(*m_queue.front());
             m_queue.pop();
@@ -89,21 +89,43 @@ namespace threadsafe
     class queue
     {
     public:
-        queue()
+        queue() : m_head(new node), m_tail(m_head.get()){};
+
+        queue(const queue &other) = delete;
+
+        queue &operator=(const queue &other) = delete;
+
+        std::shared_ptr<T> try_pop()
+        {
+            if (m_head.get() == m_tail)
+            {
+                return nullptr;
+            }
+
+            auto ret = m_head->data_;
+            auto old_head = std::move(m_head);
+            m_head = std::move(old_head->next_);
+            return ret;
+        }
+
+        void push(T new_value)
+        {
+            auto data = std::make_shared<T>(std::move(new_value));
+            auto p = std::make_unique<node>();
+            m_tail->data_ = data;
+            auto new_tail = p.get();
+            m_tail->next_ = std::move(p);
+            m_tail = new_tail;
+        }
 
     private:
         struct node
         {
-            T data_;
-            std::unique_ptr<node> next_;
+            std::shared_ptr<T> data_;
+            std::unique_ptr<node> next_; // 自动析构，但数据量较大时会爆栈，需要修改
+        };
 
-            node(T data) : data_(std::move(data))
-            {
-            }
-        }
-
-        std::unique_ptr<node>
-            m_head;
+        std::unique_ptr<node> m_head;
         node *m_tail;
     };
 
