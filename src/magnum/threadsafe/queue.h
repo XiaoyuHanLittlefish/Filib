@@ -97,23 +97,19 @@ namespace threadsafe
 
         std::shared_ptr<T> try_pop()
         {
-            if (m_head.get() == m_tail)
-            {
-                return nullptr;
-            }
-
-            auto ret = m_head->data_;
-            auto old_head = std::move(m_head);
-            m_head = std::move(old_head->next_);
-            return ret;
+            std::unique_ptr<node> old_head = pop_head();
+            return old_head ? old_head->data_ : std::shared_ptr<T>();
         }
 
         void push(T new_value)
         {
-            auto data = std::make_shared<T>(std::move(new_value));
-            auto p = std::make_unique<node>();
-            m_tail->data_ = data;
-            auto new_tail = p.get();
+            std::shared_ptr<T> new_data(
+                std::make_shared<T>(std::move(new_value)));
+            std::unique_ptr<node> p(new node);
+            node *const new_tail = p.get();
+
+            std::lock_guard<std::mutex> tail_lock(m_tail_mtx);
+            m_tail->data_ = new_data;
             m_tail->next_ = std::move(p);
             m_tail = new_tail;
         }
@@ -125,8 +121,29 @@ namespace threadsafe
             std::unique_ptr<node> next_; // 自动析构，但数据量较大时会爆栈，需要修改
         };
 
+        std::mutex m_head_mtx;
         std::unique_ptr<node> m_head;
+        std::mutex m_tail_mtx;
         node *m_tail;
+
+    private:
+        node *get_tail()
+        {
+            std::lock_guard<std::mutex> tail_lock(m_tail_mtx);
+            return m_tail;
+        }
+
+        std::unique_ptr<node> pop_head()
+        {
+            std::lock_guard<std::mutex> head_lock(m_head_mtx);
+            if (m_head.get() == get_tail())
+            {
+                return std::unique_ptr<node>(nullptr);
+            }
+            std::unique_ptr<node> old_head = std::move(m_head);
+            m_head = std::move(old_head->next_);
+            return old_head;
+        }
     };
 
 } // namespace threadsafe
