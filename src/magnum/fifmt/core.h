@@ -1,7 +1,10 @@
 #pragma once
 
 #include <corecrt.h>
+#include <cstring>
+#include <string>
 #include <type_traits>
+
 #define FIFMT_MAJOR_VERSION 1
 #define FIFMT_MINOR_VERSION 0
 #define FIFMT_PATCH_VERSION 0
@@ -134,6 +137,30 @@ FIFMT_CONSTEXPR auto to_unsigned(Int value) ->
 
   return static_cast<typename std::make_unsigned<Int>::type>(value);
 }
+
+template <typename T> constexpr FIFMT_INLINE auto const_check(T value) -> T {
+  return value;
+}
+
+template <typename... T> FIFMT_CONSTEXPR void ignore_unused(const T &...) {}
+
+constexpr FIFMT_INLINE auto
+is_constant_evaluated(bool default_value = false) noexcept -> bool {
+// Workaround for incompatibility between libstdc++ consteval-based
+// std::is_constant_evaluated() implementation and clang-14.
+// https://github.com/fmtlib/fmt/issues/3247
+#if FIFMT_CPLUSPLUS >= 202002L && defined(_GLIBCXX_RELEASE) &&                 \
+    _GLIBCXX_RELEASE >= 12 &&                                                  \
+    (FIFMT_CLANG_VERSION >= 1400 && FIFMT_CLANG_VERSION < 1500)
+  ignore_unused(default_value);
+  return __builtin_is_constant_evaluated();
+#elif defined(__cpp_lib_is_constant_evaluated)
+  ignore_unused(default_value);
+  return std::is_constant_evaluated();
+#else
+  return default_value;
+#endif
+}
 } // namespace detail
 
 template <typename Char> class basic_string_view {
@@ -145,6 +172,13 @@ public:
 
   constexpr basic_string_view(const Char *_data, size_t _size) noexcept
       : data(_data), size(_size) {}
+
+  FIFMT_INLINE basic_string_view(const Char *_data)
+      : data(_data),
+        size(detail::const_check(std::is_same<Char, char>::value &&
+                                 !detail::is_constant_evaluated(true))
+                 ? std::strlen(reinterpret_cast<const char *>(_data))
+                 : std::char_traits<Char>::length(_data)) {}
 
 private:
   const Char *data;
