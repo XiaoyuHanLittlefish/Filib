@@ -24,6 +24,13 @@
 #define FIFMT_HAS_FEATURE(x) 0
 #endif
 
+#if defined(__has_include) || FIFMT_ICC_VERSION >= 1600 ||                     \
+    FIFMT_MSC_VERSION > 1900
+#define FIFMT_HAS_INCLUDE(x) __has_include(x)
+#else
+#define FIFMT_HAS_INCLUDE(x) 0
+#endif
+
 #ifdef __has_cpp_attribute
 #define FIFMT_HAS_CPP_ATTRIBUTE(x) __has_cpp_attribute(x)
 #else
@@ -101,6 +108,17 @@
 #define FIFMT_API
 #endif
 
+// libc++ supports string_view in pre-c++17.
+#if FIFMT_HAS_INCLUDE(<string_view>) &&                                        \
+    (FIFMT_CPLUSPLUS >= 201703L || defined(_LIBCPP_VERSION))
+#include <string_view>
+#define FIFMT_USE_STRING_VIEW
+#elif FIFMT_HAS_INCLUDE("experimental/string_view") &&                         \
+    FIFMT_CPLUSPLUS >= 201402L
+#include <experimental/string_view>
+#define FMT_USE_EXPERIMENTAL_STRING_VIEW
+#endif
+
 namespace fifmt {
 
 namespace detail {
@@ -118,6 +136,15 @@ FIFMT_NORETURN FIFMT_API void assert_fail(const char *file, int line,
        ? (void)0                                                               \
        : fifmt::detail::assert_fail(__FILE__, __LINE__, (message)))
 #endif
+#endif
+
+#if defined(FIFMT_USE_STRING_VIEW)
+template <typename Char> using std_string_view = std::basic_string_view<Char>;
+#elif defined(FIFMT_USE_EXPERIMENTAL_STRING_VIEW)
+template <typename Char>
+using std_string_view = std::experimental::basic_string_view<Char>;
+#else
+template <typename T> struct std_string_view {};
 #endif
 
 FIFMT_CONSTEXPR inline auto is_utf8() -> bool {
@@ -179,6 +206,13 @@ public:
                                  !detail::is_constant_evaluated(true))
                  ? std::strlen(reinterpret_cast<const char *>(_data))
                  : std::char_traits<Char>::length(_data)) {}
+
+  template <typename Traits, typename Alloc>
+  FIFMT_CONSTEXPR basic_string_view(
+      const std::basic_string<Char, Traits, Alloc> &_data) noexcept
+      : data(_data), size(_data.size()) {}
+
+  
 
 private:
   const Char *data;
