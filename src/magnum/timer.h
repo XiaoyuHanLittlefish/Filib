@@ -1,58 +1,63 @@
-#ifndef MAGNUM_TIMER_H__
-#define MAGNUM_TIMER_H__
+#pragma once
 
-#include <chrono>
+#include <functional>
+#include <thread>
+#include <atomic>
 
-/**
- * @brief 
- * 包含了用于计时的timer类
- */
-
-class timer
-{
+namespace timer {
+class Timer {
 public:
-    using millisecond = int64_t;
+  Timer() : m_active(false), m_period(0), m_repeat(-1) {}
+  Timer(int repeat) : m_active(false), m_period(0), m_repeat(repeat) {}
+  ~Timer() { stop(); }
 
-public:
-    timer();
-    ~timer();
-    void start();
-    millisecond end();
-
-private:
-    bool running;
-    millisecond timestamp;
-};
-
-timer::timer() : running(false), timestamp(0)
-{
-}
-
-timer::~timer()
-{
-}
-
-void timer::start()
-{
-    this->running = true;
-
-    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch());
-
-    this->timestamp = (millisecond)ms.count();
-}
-
-timer::millisecond timer::end()
-{
-    if (!this->running) 
-    {
-        return -1;
+  template <typename F, typename... Args>
+  void start(int millisecond, F &&func, Args &&...args) {
+    if (m_active.load()) {
+      return;
     }
 
-    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch());
+    m_period = millisecond;
+    m_func = std::bind(std::forward<F>(func), std::forward<Args>(args)...);
+    m_active.store(true);
 
-    return (millisecond)ms.count() - this->timestamp;
-}
+    m_thread = std::thread([&]() {
+      if (m_repeat < 0) {
+        while (m_active.load()) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(m_period));
 
-#endif //!MAGNUM_TIMER_H__
+          if (!m_active.load()) {
+            return;
+          }
+          m_func();
+        }
+      } else {
+        while (m_repeat > 0) {
+          if (!m_active.load()) {
+            return;
+          }
+          std::this_thread::sleep_for(std::chrono::milliseconds(m_period));
+
+          if (!m_active.load()) {
+            return;
+          }
+          m_func();
+
+          --m_repeat;
+        }
+      }
+    });
+
+    m_thread.detach();
+  }
+
+  void stop() { m_active.store(false); }
+
+private:
+  std::thread m_thread;
+  std::atomic<bool> m_active;
+  std::function<void()> m_func;
+  int m_period; // millisecond
+  int m_repeat; // 重复次数，-1表示无限次
+};
+} // namespace timer

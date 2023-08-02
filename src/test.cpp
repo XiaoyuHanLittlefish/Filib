@@ -1,26 +1,11 @@
 #include <iostream>
 
-#include "magnum/threadsafe/queue.h"
+#include "magnum/timer.h"
 
-int main()
-{
-    threadsafe::queue<int> q;
+void func() { std::cout << "here" << std::endl; }
 
-    for (int i = 0; i < 3; i++)
-    {
-        q.push(i);
-    }
-
-    for (int i = 0; i < 5; i++)
-    {
-        auto p = q.try_pop();
-        if (p != nullptr)
-        {
-            std::cout << *p << std::endl;
-        }
-        else
-        {
-            std::cout << "q is empty" << std::endl;
-        }
-    }
+int main() {
+  timer::Timer limited_timer(5);
+  limited_timer.start(100, func);
+  getchar();
 }
