@@ -1,8 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <fstream>
-
 namespace frbtree {
 
 namespace {
@@ -121,6 +118,10 @@ public:
 public:
     Rbtree()
         : root_node(nullptr) { }
+
+    ~Rbtree() {
+        free_node(this->root_node);
+    }
 
     bool find(const T &data) {
         Node *now_ptr = root_node;
@@ -451,6 +452,15 @@ private:
             erase_fixup_black_black(father_ptr, type);
         }
         delete erase_ptr;
+    }
+
+    void free_node(Node *node_ptr) {
+        if (nullptr == node_ptr) {
+            return;
+        }
+        free_node(node_ptr->get_child(NodeType::LEFT));
+        free_node(node_ptr->get_child(NodeType::RIGHT));
+        delete node_ptr;
     }
 
 private:
